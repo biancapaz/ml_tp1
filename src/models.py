@@ -2,10 +2,14 @@
 import numpy as np
 
 class LinearRegression():
-    def __init__(self, X, y):
+    def __init__(self, X, y, l2=0, l1=0):
         self.feature_names = list(X.columns)
         self.X = X.values
         self.y = y.reshape(-1, 1)
+
+        # coefs de regularizacion L2 y L1
+        self.l2 = l2
+        self.l1 = l1
 
         self.coef_inv = None
         self.coef_grad = None

@@ -41,7 +41,7 @@ def normalize(train, val):
     stds = {}
     
     for c in columns:
-        print(c)
+
         means[c] = train[c].mean()
         stds[c] = train[c].std()
 
@@ -59,10 +59,6 @@ def normalize(train, val):
         else:
             train_scaled[c] = (train[c] - means[c])/stds[c]
             val_scaled[c] = (val[c] - means[c])/stds[c]
-            
-    print("Check notmalized train\n")
-    print(train_scaled[columns].mean())
-    print(train_scaled[columns].std())
 
     return train_scaled, val_scaled
 
