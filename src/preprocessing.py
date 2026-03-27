@@ -73,8 +73,6 @@ def fill_edad_median(df_train, df_val):
 
     median = df_train["edad"].median()
 
-    print("Edad filled with train median: ", median)
-
     df_train["edad"] = df_train["edad"].fillna(median)
     df_val["edad"] = df_val["edad"].fillna(median)
 

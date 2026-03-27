@@ -16,10 +16,6 @@ class LinearRegression():
 
         self.add_bias()
 
-        print(self.X.shape)
-        print(self.y.shape)
-        print(len(self.feature_names))
-
     def add_bias(self):
         n_samples = self.X.shape[0]
         bias = np.ones((n_samples,1))
@@ -29,11 +25,20 @@ class LinearRegression():
 
     def pseudo_inverse(self):
         #entrenamiento por pseudo-inversa
-        pinv = np.linalg.pinv(self.X.T @ self.X)
+
+        xtx = self.X.T @ self.X
+
+        if self.l2 == 0:
+            pinv = np.linalg.pinv(xtx)
+        
+        else:
+            ident = np.identity(self.X.shape[1])
+            ident[0,0] = 0 # pongo en 0 para que no regularice bias
+
+            pinv = np.linalg.pinv(xtx + self.l2 * ident)
+            
         w = pinv @ self.X.T @ self.y
         self.coef_inv = w
-
-        print(w.shape)
 
     def mse(self, coef):
         if coef is None:
@@ -48,21 +53,41 @@ class LinearRegression():
         preds = self.X @ coef
         err = preds - self.y
         grad = (2/self.X.shape[0]) * (self.X.T @ err)
+
+        if self.l1 != 0:
+            reg = self.l1 * np.sign(coef)
+            reg[0] = 0
+            grad += reg
+
         return grad
 
-    def gradient_descent(self, lr=0.05, epochs=200):
+    def gradient_descent(self, lr=0.001, epochs=1000):
         w = np.zeros((len(self.feature_names), 1))
         errors = []
 
-        for i in range(epochs):
+        for _ in range(epochs):
             grad = self.grad_mse(w)
             w = w - lr * grad
 
+            y_pred = self.X @ w
             errors.append(self.mse(w))
 
         self.coef_grad = w
 
         return errors
+    
+    def predict(self, X_val):
+
+        X_np = X_val.values
+
+        # agregar bias
+        bias = np.ones((X_np.shape[0], 1))
+        X_np = np.hstack((bias, X_np))
+
+        if self.l1 != 0:
+            return X_np @ self.coef_grad
+        else:
+            return X_np @ self.coef_inv
 
     def show_coef_inv(self):
         for feature, w in zip(self.feature_names, self.coef_inv):
