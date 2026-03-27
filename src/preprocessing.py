@@ -10,6 +10,14 @@ def preprocess(df):
 
     return df
 
+def finish_process(train, val):
+
+    X_train_proc, X_val_proc = fill_edad_median(train, val)
+    X_train_proc, X_val_proc = one_hot_encoder(X_train_proc, X_val_proc)
+    X_train_norm, X_val_norm = normalize(X_train_proc, X_val_proc)
+
+    return X_train_norm, X_val_norm
+
 def one_hot_encoder(train, val):
 
     known_types = train["tipo"].unique()

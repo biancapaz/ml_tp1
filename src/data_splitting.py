@@ -2,7 +2,8 @@
 
 import numpy as np
 from models import LinearRegression
-from preprocessing import normalize, one_hot_encoder, fill_edad_median
+from preprocessing import fill_edad_median, one_hot_encoder, normalize
+from utils import feature_engineering
 from metrics import mse
 
 def train_val_split(df, train_ratio=0.8, random_state=42):
@@ -58,22 +59,27 @@ def cross_val(train, lambdas, model_type, k=5, seed=42, lr=0.001, epochs=1000):
             X_train = train_set.drop(columns=["precio"])
             X_val = val_set.drop(columns=["precio"])
 
-            # finish processing data
+            # finishing processing data --> fill edad, one hot, feature engineering and normalization
             X_train_proc, X_val_proc = fill_edad_median(X_train, X_val)
             X_train_proc, X_val_proc = one_hot_encoder(X_train_proc, X_val_proc)
-            X_train_norm, X_val_norm = normalize(X_train_proc, X_val_proc)
+            # apply feature engineering for M4
+            train_fe = feature_engineering(X_train_proc)
+            val_fe = feature_engineering(X_val_proc)
+            # normalize
+            X_train_norm, X_val_norm = normalize(train_fe, val_fe)
 
             # train model depending on model_type
             if model_type == "ridge":
                 model = LinearRegression(X_train_norm, y_train, l2=l, l1=0)
                 model.pseudo_inverse()
-            
+                y_pred = model.predict_inv(X_val_norm)
+
             else: # model_type == "lasso"
                 model = LinearRegression(X_train_norm, y_train, l2=0, l1=l)
                 model.gradient_descent(lr=lr, epochs=epochs)
+                y_pred = model.predict_grad(X_val_norm)
 
             # prediction with validation
-            y_pred = model.predict(X_val_norm)
             error = mse(y_val, y_pred)
             fold_errors.append(error)
         
