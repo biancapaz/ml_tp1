@@ -7,6 +7,7 @@ from utils import feature_engineering
 from metrics import mse
 
 def train_val_split(df, train_ratio=0.8, random_state=42):
+
     np.random.seed(random_state) # set a seed for reproducibility
     shuffled_indexes = np.random.permutation(len(df))
 
@@ -32,41 +33,49 @@ def kfold_split(train, k=5, seed=42):
 
     return folds
 
-def cross_val(train, lambdas, model_type, k=5, seed=42, lr=0.001, epochs=1000):
+def cross_val(df, lambdas, model_type, k=5, seed=42, lr=0.001, epochs=1000):
 
-    folds = kfold_split(train, k, seed)
+    features_M4 = [
+        "Área", "metros_cubiertos", "ambientes", "pileta", "lat", "edad",
+        "area_log", "area_sq", "densidad", "area_pileta", "ambientes_por_area"
+    ]
+
+    folds = kfold_split(df, k, seed)
     l_errors = {}
 
     for l in lambdas:
 
         fold_errors = []
         
-
-        for i in range(len(folds)):
+        for i in range(k):
 
             # set indexes
             val_idx = folds[i]
-            train_idx = np.concatenate([folds[j] for j in range(len(folds)) if j != i])
+            train_idx = np.concatenate([folds[j] for j in range(k) if j != i])
 
             # create subsets and reset indexes to start from 0 and drop old ones
-            val_set = train.iloc[val_idx].copy().reset_index(drop=True)
-            train_set = train.iloc[train_idx].copy().reset_index(drop=True)
+            val_set = df.iloc[val_idx].copy().reset_index(drop=True)
+            train_set = df.iloc[train_idx].copy().reset_index(drop=True)
 
             # separate target
             y_train = train_set['precio'].values.copy()
             y_val = val_set['precio'].values.copy()
-
             X_train = train_set.drop(columns=["precio"])
             X_val = val_set.drop(columns=["precio"])
 
+            # Pipeline de procesamiento (estadísticas SOLO de train del fold)
             # finishing processing data --> fill edad, one hot, feature engineering and normalization
-            X_train_proc, X_val_proc = fill_edad_median(X_train, X_val)
-            X_train_proc, X_val_proc = one_hot_encoder(X_train_proc, X_val_proc)
-            # apply feature engineering for M4
-            train_fe = feature_engineering(X_train_proc)
-            val_fe = feature_engineering(X_val_proc)
-            # normalize
-            X_train_norm, X_val_norm = normalize(train_fe, val_fe)
+            X_train, X_val = fill_edad_median(X_train, X_val)
+            X_train, X_val = one_hot_encoder(X_train, X_val)
+ 
+            X_train_fe = feature_engineering(X_train)
+            X_val_fe   = feature_engineering(X_val)
+ 
+            # Selección de las mismas features que en el modelo final
+            X_train_fe = X_train_fe[features_M4]
+            X_val_fe   = X_val_fe[features_M4]
+ 
+            X_train_norm, X_val_norm = normalize(X_train_fe, X_val_fe)
 
             # train model depending on model_type
             if model_type == "ridge":
@@ -83,17 +92,8 @@ def cross_val(train, lambdas, model_type, k=5, seed=42, lr=0.001, epochs=1000):
             error = mse(y_val, y_pred)
             fold_errors.append(error)
         
-        l_errors[l] = np.mean(fold_errors)
+        l_errors[l] = float(np.mean(fold_errors))
     
     best_l = min(l_errors, key=l_errors.get)
 
     return best_l, l_errors
-
-            
-
-            
-
-
-
-
-    

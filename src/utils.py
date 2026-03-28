@@ -1,8 +1,5 @@
 # Funciones auxiliares
 
-#save_results()     Para guardar resultados
-#load_model()       Para cargar un modelo guardado
-
 import numpy as np
 from models import LinearRegression
 from preprocessing import fill_edad_median, one_hot_encoder, normalize
@@ -20,6 +17,7 @@ def feature_engineering(df):
     return df
 
 def add_high_degree_features(df, cols, max_degree=8):
+
     df_new = df.copy()
 
     for c in cols:
@@ -31,26 +29,20 @@ def add_high_degree_features(df, cols, max_degree=8):
 def learning_curve_model(train_df, val_df, model_name, best_l1=0, best_l2=0, lr=0.001, epochs=1000):
 
     sizes = np.linspace(0.1, 1.0, 10)
-
     train_errors = []
     val_errors = []
 
     for s in sizes:
         n = int(len(train_df) * s)
-        subset = train_df.sample(n=n, random_state=42).copy()  # 🔥 importante
+        subset = train_df.sample(n=n, random_state=42).copy()
 
-        # --- target ---
+        # target
         y_train = subset["precio"].values
         y_val = val_df["precio"].values
-
         X_train = subset.drop(columns=["precio"])
         X_val = val_df.drop(columns=["precio"])
 
-        # =========================
-        # MODELOS
-        # =========================
-
-        # -------- M1 --------
+        # select feature epending on model
         if model_name == "M1":
             X_train = X_train[["Área"]]
             X_val = X_val[["Área"]]
@@ -65,7 +57,7 @@ def learning_curve_model(train_df, val_df, model_name, best_l1=0, best_l2=0, lr=
             X_train, X_val = fill_edad_median(X_train, X_val)
             X_train, X_val = one_hot_encoder(X_train, X_val)
 
-            # elegí tus 6 features
+            # 6 features
             features_M3 = ["Área", "metros_cubiertos" , "ambientes", "pileta", "lat", "edad"]
             X_train = X_train[features_M3]
             X_val = X_val[features_M3]
@@ -94,14 +86,10 @@ def learning_curve_model(train_df, val_df, model_name, best_l1=0, best_l2=0, lr=
             X_train = add_high_degree_features(X_train, cols=features_M5, max_degree=8)
             X_val = add_high_degree_features(X_val, cols=features_M5, max_degree=8)
 
-        # =========================
-        # NORMALIZACIÓN
-        # =========================
+        # normalize
         X_train, X_val = normalize(X_train, X_val)
 
-        # =========================
-        # ENTRENAMIENTO
-        # =========================
+        # train
         if model_name == "M6":
             # usar mejores lambdas
             model = LinearRegression(X_train, y_train, l2=best_l2, l1=best_l1)
@@ -122,9 +110,7 @@ def learning_curve_model(train_df, val_df, model_name, best_l1=0, best_l2=0, lr=
             y_pred_train = model.predict_inv(X_train)
             y_pred_val = model.predict_inv(X_val)
 
-        # =========================
-        # ERRORES
-        # =========================
+        # errors
         train_errors.append(rmse(y_train, y_pred_train))
         val_errors.append(rmse(y_val, y_pred_val))
 
